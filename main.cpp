@@ -12,9 +12,15 @@ using namespace std;
 string getInput()
 {
   string input;
-  cout << "[" << get_current_dir_name() <<  "]: " ;
+  cout << "[" << get_current_dir_name() <<  ":]: " ;
   getline(cin, input);
   return input;
+}
+
+void myHandler(int signalId)
+{
+  std::cout << "The signal ID is: " << signalId << std::endl;
+  getInput();
 }
 
 void printHistory(vector<string> history)
@@ -36,6 +42,8 @@ int main(int argc, char* argv[])
   string input;
   std::chrono::duration<double> time(0);
 
+  signal(SIGINT, myHandler);
+  
   input = getInput();
 
   while(input != "exit")
@@ -68,6 +76,13 @@ int main(int argc, char* argv[])
       history.push_back(input);
       cout << "Time spent executing child processes: " << fixed << setprecision(4) << time.count() << " seconds" << endl;
     }
+    else if(input.substr(0,2) == "cd")
+    {
+      cout << "got in the cd section" << endl;
+      history.push_back(input);
+      chdir(input.substr(2));
+
+    } 
     else
     {
 
