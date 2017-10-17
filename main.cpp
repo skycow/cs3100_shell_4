@@ -80,7 +80,8 @@ int main(int argc, char* argv[])
     {
       cout << "got in the cd section" << endl;
       history.push_back(input);
-      chdir(input.substr(2));
+
+      chdir(input.substr(input.begin()+3));
 
     } 
     else
