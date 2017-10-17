@@ -12,7 +12,7 @@ using namespace std;
 string getInput()
 {
   string input;
-  cout << "[cmd]: " ;
+  cout << "[" << get_current_dir_name() <<  "]: " ;
   getline(cin, input);
   return input;
 }
