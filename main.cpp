@@ -35,7 +35,7 @@ void printCommandError(string input)
   cout << "Error: " << input << " is an invalid command" << endl;
 }
 
-createandexec(string input)
+void createandexec(string input)
 {
   vector<string> newinputs;
   int first=0;
@@ -82,7 +82,7 @@ createandexec(string input)
   exit(0);
 }
 
-int execwithpipe(string input)
+void execwithpipe(string input)
 {
 	int pids[PIPE_COUNT];
 	pipe(pids);
