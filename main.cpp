@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
       cout << "got in the cd section" << endl;
       history.push_back(input);
 
-      chdir(input.substr(input.begin()+3));
+      chdir(input.substr(3));
 
     }
     else if(input.find('|') != std::string::npos)

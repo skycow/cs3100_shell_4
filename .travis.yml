@@ -5,6 +5,3 @@ script:
   - cd build
   - cmake ..
   - make
-  - ./Assign3
-  - exit
-
