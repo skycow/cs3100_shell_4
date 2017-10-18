@@ -104,7 +104,7 @@ void execwithpipe(string input)
 	{
 		dup2(pids[PIPE_WRITE_END], STDOUT);
 
-		createandexec(input.substr(0,input.find('|')))
+		createandexec(input.substr(0,input.find('|')));
 	}
 
 	//
@@ -119,7 +119,7 @@ void execwithpipe(string input)
 		// will continue to wait for additional data.
 		close(pids[PIPE_WRITE_END]);
 
-		createandexec(input.substr(input.find('|')))
+		createandexec(input.substr(input.find('|')));
 	}
 
 	//
