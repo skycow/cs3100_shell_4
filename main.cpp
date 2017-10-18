@@ -12,14 +12,13 @@ using namespace std;
 string getInput()
 {
   string input;
-  cout << "[" << get_current_dir_name() <<  ":]: " ;
+  cout << "[" << get_current_dir_name() <<  "]: " ;
   getline(cin, input);
   return input;
 }
 
 void myHandler(int signalId)
 {
-  std::cout << "The signal ID is: " << signalId << std::endl;
   getInput();
 }
 
@@ -36,6 +35,106 @@ void printCommandError(string input)
   cout << "Error: " << input << " is an invalid command" << endl;
 }
 
+createandexec(string input)
+{
+  vector<string> newinputs;
+  int first=0;
+
+  while(input[0] == ' ')
+  {
+    input.erase(0,1);
+  }
+  while(input[input.size()-1] == ' ')
+  {
+    input.erase(input.end());
+  }
+
+  for(int i = 0; i < input.size(); i++)
+  {
+    if(input[i] == ' ')
+    {
+      newinputs.push_back(input.substr(first, i-first));
+      if(i+1 < input.size())
+      {
+        int iter = 1;
+        while(input[i+iter] == ' ')
+        {
+          input.erase(i+iter,1);
+        }
+        first = i+1;
+      }
+    }
+  }
+  newinputs.push_back(input.substr(first));
+
+  char ** newargv = new char*[newinputs.size()+1];
+
+  for(int i = 0; i < newinputs.size(); i++)
+  {
+    newargv[i] = new char[newinputs[i].size()+1];
+    strcpy(newargv[i], newinputs[i].c_str());
+  }
+  newargv[newinputs.size()] = NULL;
+
+
+  execvp(newargv[0], newargv);
+  printCommandError(input);
+  exit(0);
+}
+
+int execwithpipe(string input)
+{
+	int pids[PIPE_COUNT];
+	pipe(pids);
+
+	int savedStdout = dup(STDOUT);
+	int savedStdin = dup(STDIN);
+
+	//
+	// First child will output the source code to this program to the pipe
+	pid_t pid = fork();
+	if (pid == 0)
+	{
+		dup2(pids[PIPE_WRITE_END], STDOUT);
+
+		createandexec(input.substr(0,input.find('|')))
+	}
+
+	//
+	// Second child will 'more' whatever input comes down over the pipe
+	pid_t pid2 = fork();
+	if (pid2 == 0)
+	{
+		dup2(pids[PIPE_READ_END], STDIN);
+		//
+		// This is key, in order to terminate the input from the pipe
+		// have to close off the write end, otherwise the 'more' command
+		// will continue to wait for additional data.
+		close(pids[PIPE_WRITE_END]);
+
+		createandexec(input.substr(input.find('|')))
+	}
+
+	//
+	// Wait for the first child to finish
+	int status;
+	waitpid(pid, &status, 0);
+
+	//
+	// Fully close down the pipe, and yes, for whatever reason, it requires
+	// the parent process to close both ends, even though the second child
+	// already closed the write end...not sure I fully understand this.
+	close(pids[PIPE_WRITE_END]);
+	close(pids[PIPE_READ_END]);
+
+	waitpid(pid2, &status, 0);
+
+	//
+	// Restore standard out and in, so our program will be back to normal when complete
+	dup2(savedStdout, STDOUT);
+	dup2(savedStdin, STDIN);
+}
+
 int main(int argc, char* argv[])
 {
   vector<string> history;
@@ -43,7 +142,7 @@ int main(int argc, char* argv[])
   std::chrono::duration<double> time(0);
 
   signal(SIGINT, myHandler);
-  
+
   input = getInput();
 
   while(input != "exit")
@@ -83,75 +182,36 @@ int main(int argc, char* argv[])
 
       chdir(input.substr(input.begin()+3));
 
-    } 
+    }
+    else if(input.find('|') != std::string::npos)
+    {
+      execwithpipe(input);
+    }
     else
     {
 
         history.push_back(input);
-        
+
         //auto pid = fork();
-        
+
         if(fork())
         {
-          
+
           std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
           wait(NULL);
           std::chrono::time_point<std::chrono::high_resolution_clock> end = std::chrono::high_resolution_clock::now();
-          
+
           time += end - start;
-          
+
         }
-        else 
+        else
         {
-          
-          vector<string> newinputs;
-          int first=0;
-          
-          while(input[0] == ' ')
-          {
-            input.erase(0,1);
-          }
-          while(input[input.size()-1] == ' ')
-          {
-            input.erase(input.end());
-          }
-
-          for(int i = 0; i < input.size(); i++)
-          {
-            if(input[i] == ' ')
-            {
-              newinputs.push_back(input.substr(first, i-first));
-              if(i+1 < input.size())
-              {
-                int iter = 1;
-                while(input[i+iter] == ' ')
-                {
-                  input.erase(i+iter,1);
-                }
-                first = i+1;
-              }
-            }
-          }
-          newinputs.push_back(input.substr(first));
-          
-          char ** newargv = new char*[newinputs.size()+1];
-
-          for(int i = 0; i < newinputs.size(); i++)
-          {
-            newargv[i] = new char[newinputs[i].size()+1];
-            strcpy(newargv[i], newinputs[i].c_str());
-          }
-          newargv[newinputs.size()] = NULL; 
-          
-          
-          execvp(newargv[0], newargv);
-          printCommandError(input);
-          exit(0);
+          createandexec(input);
         }
       }
     }
-     
-    input = getInput(); 
+
+    input = getInput();
   }
 
   return 0;
