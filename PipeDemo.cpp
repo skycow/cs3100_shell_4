@@ -25,6 +25,8 @@ int main()
 	pid_t pid = fork();
 	if (pid == 0)
 	{
+		
+		std::cout << "in 1" << std::endl;
 		dup2(pids[PIPE_WRITE_END], STDOUT);
 
 		char** argv = new char*[3];
@@ -42,6 +44,7 @@ int main()
 	pid_t pid2 = fork();
 	if (pid2 == 0)
 	{
+		std::cout << "in 2" << std::endl;
 		dup2(pids[PIPE_READ_END], STDIN);
 		//
 		// This is key, in order to terminate the input from the pipe
@@ -53,15 +56,15 @@ int main()
 		argv[0] = new char[5];
 		strcpy(argv[0], "more");
 		argv[1] = NULL;
-
+std::cout << "in 2.2" << std::endl;
 		execvp(argv[0], argv);
 	}
-
+std::cout << "parent here" << std::endl;
 	//
 	// Wait for the first child to finish
 	int status;
 	waitpid(pid, &status, 0);
-
+std::cout << "parent here 1" << std::endl;
 	//
 	// Fully close down the pipe, and yes, for whatever reason, it requires
 	// the parent process to close both ends, even though the second child
@@ -70,7 +73,7 @@ int main()
 	close(pids[PIPE_READ_END]);
 
 	waitpid(pid2, &status, 0);
-
+std::cout << "parent here 2" << std::endl;
 	//
 	// Restore standard out and in, so our program will be back to normal when complete
 	dup2(savedStdout, STDOUT);

@@ -6,6 +6,11 @@
 #include <sys/wait.h>
 #include <cstring>
 #include <iomanip>
+#include <functional>
+#include <signal.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 using namespace std;
 
@@ -44,6 +49,7 @@ void printCommandError(string input)
 
 void createandexec(string input)
 {
+  
   vector<string> newinputs;
   int first=0;
 
@@ -51,11 +57,12 @@ void createandexec(string input)
   {
     input.erase(0,1);
   }
+  
   while(input[input.size()-1] == ' ')
   {
     input.erase(input.end());
   }
-
+  
   for(int i = 0; i < input.size(); i++)
   {
     if(input[i] == ' ')
@@ -73,7 +80,7 @@ void createandexec(string input)
     }
   }
   newinputs.push_back(input.substr(first));
-
+  
   char ** newargv = new char*[newinputs.size()+1];
 
   for(int i = 0; i < newinputs.size(); i++)
@@ -82,6 +89,13 @@ void createandexec(string input)
     strcpy(newargv[i], newinputs[i].c_str());
   }
   newargv[newinputs.size()] = NULL;
+
+cout << "size: " << newinputs.size() << endl;
+
+for(int i = 0; i < newinputs.size(); i++)
+{
+  cout << i << ": " << newargv[i] << endl;
+}
 
 
   execvp(newargv[0], newargv);
@@ -102,8 +116,9 @@ void execwithpipe(string input)
 	pid_t pid = fork();
 	if (pid == 0)
 	{
+	  cout << "path3 " << input.substr(0,input.find('|')) << endl;
 		dup2(pids[PIPE_WRITE_END], STDOUT);
-
+cout << "path3.1 " << input.substr(0,input.find('|')) << endl;
 		createandexec(input.substr(0,input.find('|')));
 	}
 
@@ -112,34 +127,46 @@ void execwithpipe(string input)
 	pid_t pid2 = fork();
 	if (pid2 == 0)
 	{
+	  int status;
+	  cout << "wait1" << endl;
+	  waitpid(pid, &status, 0);
+	  cout << "wait2" << endl;
+	  close(pids[PIPE_WRITE_END]);
+	  close(pids[PIPE_READ_END]);
 		dup2(pids[PIPE_READ_END], STDIN);
 		//
 		// This is key, in order to terminate the input from the pipe
 		// have to close off the write end, otherwise the 'more' command
 		// will continue to wait for additional data.
 		close(pids[PIPE_WRITE_END]);
-
-		createandexec(input.substr(input.find('|')));
+cout << "path4 " << input.substr(input.find("| ")+2) << endl;
+    createandexec(input.substr(input.find("| ")+2));
+		
 	}
-
+cout << "parent here" << endl;
 	//
 	// Wait for the first child to finish
 	int status;
 	waitpid(pid, &status, 0);
-
+cout << "parent here 2" << endl;
 	//
 	// Fully close down the pipe, and yes, for whatever reason, it requires
 	// the parent process to close both ends, even though the second child
 	// already closed the write end...not sure I fully understand this.
-	close(pids[PIPE_WRITE_END]);
-	close(pids[PIPE_READ_END]);
+	//close(pids[PIPE_WRITE_END]);
+	//close(pids[PIPE_READ_END]);
 
 	waitpid(pid2, &status, 0);
-
+cout << "parent here 3" << endl;
 	//
 	// Restore standard out and in, so our program will be back to normal when complete
 	dup2(savedStdout, STDOUT);
 	dup2(savedStdin, STDIN);
+	
+	std::cout << "Enter something: ";
+	std::string input2;
+	std::getline(std::cin, input2);
+	std::cout << "You entered..." << input2 << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -192,6 +219,7 @@ int main(int argc, char* argv[])
     }
     else if(input.find('|') != std::string::npos)
     {
+      cout << "path1" << endl;
       execwithpipe(input);
     }
     else
@@ -213,6 +241,7 @@ int main(int argc, char* argv[])
         }
         else
         {
+          cout << "path2" << endl;
           createandexec(input);
         }
       }
